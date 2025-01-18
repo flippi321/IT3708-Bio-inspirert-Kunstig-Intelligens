@@ -74,11 +74,26 @@ impl Population {
         // Update the population with the new generation of actors
         self.actors = new_actors;
     }
+
+    pub fn mutate_population(&mut self) {
+        let mutation_rate: f64 = 0.1; // Update
+    
+        for actor in &mut self.actors {
+            // Traverse each bit in the actor's bitstring
+            for bit in &mut actor.bitstring {
+                // Check if we shoul mutate
+                if rand::thread_rng().gen_bool(mutation_rate) {
+                    *bit = !*bit;  // Flip the bit
+                }
+            }
+        }
+    }
+    
 }
 
 fn main() {
     // Create a population with 5 actors, each having a bitstring of length 10
-    let mut population = Population::new(50, 10);
+    let mut population = Population::new(5, 10);
 
     // Print each Actor's bitstring
     for (i, actor) in population.actors.iter().enumerate() {
@@ -93,6 +108,7 @@ fn main() {
     for run in 1..=50 {
         println!("\nRun {}:", run);
         population.roulette_selection();
+        population.mutate_population();
 
         // Print the new population's bitstrings after roulette selection
         for (i, actor) in population.actors.iter().enumerate() {
