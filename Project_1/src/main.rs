@@ -2,11 +2,11 @@ use rand::Rng;
 
 #[derive(Clone)]
 pub struct Actor {
-    pub bitstring: Vec<bool>,  // Bitstring
+    pub bitstring: Vec<bool>, // Bitstring
 }
 
 pub struct Population {
-    pub size: usize,        // Population size
+    pub size: usize, // Population size
     pub actors: Vec<Actor>,
     pub mutation_rate: f64,
 }
@@ -24,11 +24,17 @@ impl Population {
     pub fn new(size: usize, bitstring_length: usize, mutation_rate: f64) -> Self {
         let actors = (0..size)
             .map(|_| Actor {
-                bitstring: (0..bitstring_length).map(|_| rand::thread_rng().gen_bool(0.5)).collect(),
+                bitstring: (0..bitstring_length)
+                    .map(|_| rand::thread_rng().gen_bool(0.5))
+                    .collect(),
             })
             .collect();
-        
-        Population { size, actors, mutation_rate }
+
+        Population {
+            size,
+            actors,
+            mutation_rate,
+        }
     }
 
     // Calculate selection probabilities for each actor
@@ -38,16 +44,16 @@ impl Population {
 
         // Summarize all Actors
         for (i, actor) in self.actors.iter().enumerate() {
-            let fitness = actor.fit() as f64;  // Calculate fitness
-            total_fit += fitness;              // Accumulate total fitness
-            prob[i] = fitness;                 // Store fitness in prob temporarily
+            let fitness = actor.fit() as f64; // Calculate fitness
+            total_fit += fitness; // Accumulate total fitness
+            prob[i] = fitness; // Store fitness in prob temporarily
         }
 
         // Calculate the probability of selection for each actor
         for value in prob.iter_mut() {
-            *value /= total_fit;  // Normalize fitness to get selection probability
+            *value /= total_fit; // Normalize fitness to get selection probability
         }
-        
+
         prob
     }
 
@@ -66,8 +72,8 @@ impl Population {
 
         // Select actors based on the cumulative probability distribution
         for _ in 0..self.size {
-            let rand_val: f64 = rng.gen_range(0.0..1.0);  // Random number between 0 and 1
-            // Find the selected actor based on the random value
+            let rand_val: f64 = rng.gen_range(0.0..1.0); // Random number between 0 and 1
+                                                         // Find the selected actor based on the random value
             let selected_actor_index = cumulative_prob.iter().position(|&c| c >= rand_val).unwrap();
             new_actors.push(self.actors[selected_actor_index].clone());
         }
@@ -82,12 +88,33 @@ impl Population {
             for bit in &mut actor.bitstring {
                 // Check if we shoul mutate
                 if rand::thread_rng().gen_bool(self.mutation_rate) {
-                    *bit = !*bit;  // Flip the bit
+                    *bit = !*bit; // Flip the bit
                 }
             }
         }
     }
+
+    pub fn apply_crossover(&mut self) {
+        let mut rng = rand::thread_rng();
+        
+        // Iterate over pairs of actors
+        let actors_len = self.actors.len();
+        for i in (0..actors_len).step_by(2) {
+            if i + 1 < actors_len {
+                let crossover_point = rng.gen_range(0..self.actors[0].bitstring.len()); // Random crossover point
+                
+                // Use split_at_mut to borrow two non-overlapping mutable slices
+                let (actor1, actor2) = self.actors.split_at_mut(i + 1); // Split the slice at the index i+1
+                let (actor1, actor2) = ( &mut actor1[i], &mut actor2[0]);
     
+                // Perform crossover
+                for j in crossover_point..actor1.bitstring.len() {
+                    std::mem::swap(&mut actor1.bitstring[j], &mut actor2.bitstring[j]);
+                    println!()
+                }
+            }
+        }
+    }
 }
 
 fn main() {
@@ -97,7 +124,9 @@ fn main() {
 
     // Print each Actor's bitstring
     for (i, actor) in population.actors.iter().enumerate() {
-        let bitstring: String = actor.bitstring.iter()
+        let bitstring: String = actor
+            .bitstring
+            .iter()
             .map(|&bit| if bit { '1' } else { '0' })
             .collect();
         println!("Actor {}: {}, eval: {}", i + 1, bitstring, actor.fit());
@@ -108,11 +137,14 @@ fn main() {
     for run in 1..=500 {
         println!("\nRun {}:", run);
         population.roulette_selection();
+        population.apply_crossover();
         population.mutate_population();
 
         // Print the new population's bitstrings after roulette selection
         for (i, actor) in population.actors.iter().enumerate() {
-            let bitstring: String = actor.bitstring.iter()
+            let bitstring: String = actor
+                .bitstring
+                .iter()
                 .map(|&bit| if bit { '1' } else { '0' })
                 .collect();
             println!("Actor {}: {}, fit: {}", i + 1, bitstring, actor.fit());
