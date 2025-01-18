@@ -8,6 +8,7 @@ pub struct Actor {
 pub struct Population {
     pub size: usize,        // Population size
     pub actors: Vec<Actor>,
+    pub mutation_rate: f64,
 }
 
 impl Actor {
@@ -20,14 +21,14 @@ impl Actor {
 
 impl Population {
     // Create a new Population with a given size and bitstring length
-    pub fn new(size: usize, bitstring_length: usize) -> Self {
+    pub fn new(size: usize, bitstring_length: usize, mutation_rate: f64) -> Self {
         let actors = (0..size)
             .map(|_| Actor {
                 bitstring: (0..bitstring_length).map(|_| rand::thread_rng().gen_bool(0.5)).collect(),
             })
             .collect();
         
-        Population { size, actors }
+        Population { size, actors, mutation_rate }
     }
 
     // Calculate selection probabilities for each actor
@@ -76,13 +77,11 @@ impl Population {
     }
 
     pub fn mutate_population(&mut self) {
-        let mutation_rate: f64 = 0.1; // Update
-    
         for actor in &mut self.actors {
             // Traverse each bit in the actor's bitstring
             for bit in &mut actor.bitstring {
                 // Check if we shoul mutate
-                if rand::thread_rng().gen_bool(mutation_rate) {
+                if rand::thread_rng().gen_bool(self.mutation_rate) {
                     *bit = !*bit;  // Flip the bit
                 }
             }
@@ -92,8 +91,9 @@ impl Population {
 }
 
 fn main() {
-    // Create a population with 5 actors, each having a bitstring of length 10
-    let mut population = Population::new(5, 10);
+    // Create a population with 5 actors, each having a bitstring of length 10, and mutaion rate of 0.05
+    let mutation_rate = 1f64 / (5f64 * 10f64);
+    let mut population = Population::new(20, 10, mutation_rate);
 
     // Print each Actor's bitstring
     for (i, actor) in population.actors.iter().enumerate() {
@@ -105,7 +105,7 @@ fn main() {
 
     // Run roulette selection 5 times and print the selected actors for each run
     println!("\nRoulette Selection (5 times):");
-    for run in 1..=50 {
+    for run in 1..=500 {
         println!("\nRun {}:", run);
         population.roulette_selection();
         population.mutate_population();
