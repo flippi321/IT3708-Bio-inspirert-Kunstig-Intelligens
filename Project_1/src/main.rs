@@ -31,14 +31,14 @@ impl Actor {
 
         // Apply punishment if the sum of 'p' exceeds 'max_size'
         if sum_p > max_size {
-            let penalty = ((sum_p - max_size) as usize).min(total_fitness); // Ensure penalty does not exceed total fitness
-            total_fitness - penalty
+            let distance_metric: usize = max_size as usize;
+            let penalized_fitness: usize = (total_fitness - distance_metric * 2) as usize; // We penalize by removing 10% of gathered points
+            penalized_fitness
         } else {
             total_fitness
         }
     }
 }
-
 
 impl Population {
     // Create a new Population with a given size and bitstring length
@@ -70,7 +70,7 @@ impl Population {
             prob[i] = fitness; // Store fitness in prob temporarily
         }
 
-        for value in prob.iter_mut() {
+        for value   in prob.iter_mut() {
             *value /= total_fit; // Normalize fitness to get selection probability
         }
 
@@ -204,7 +204,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let total_space: i64 = 280785;
     let data = read_csv("data/KP/knapPI_12_500_1000_82.csv")?;
     let bitstring_length = data.len();
-    let mutation_rate = 2.0 / (5.0 * bitstring_length as f64);
+    let mutation_rate = 2.0 / (bitstring_length as f64);
     let mut population = Population::new(1000, bitstring_length, mutation_rate, data);
 
     let fitness_history = population.run_evolution(total_space, 1000);
