@@ -1,3 +1,4 @@
+use plotters::prelude::*;
 use rand::Rng;
 use std::error::Error;
 use std::path::Path;
@@ -129,7 +130,6 @@ impl Population {
                 // Perform crossover
                 for j in crossover_point..actor1.bitstring.len() {
                     std::mem::swap(&mut actor1.bitstring[j], &mut actor2.bitstring[j]);
-                    println!()
                 }
             }
         }
@@ -155,40 +155,41 @@ fn read_csv<P: AsRef<Path>>(path: P) -> Result<Vec<(usize, usize, usize, usize)>
 
 fn main() {
     let total_space: i64 = 280785;
-
     let data = read_csv("data/KP/knapPI_12_500_1000_82.csv").expect("Failed to read CSV");
     let bitstring_length = data.len();
-    let mutation_rate = 1f64 / (5f64 * bitstring_length as f64);
-    let mut population = Population::new(20, bitstring_length, mutation_rate, data);
+    let mutation_rate = 1f64 / (bitstring_length as f64);
+    let mut population = Population::new(500, bitstring_length, mutation_rate, data);
 
-    // Print each Actor's bitstring and fitness
-    for (i, actor) in population.actors.iter().enumerate() {
-        let bitstring: String = actor
-            .bitstring
-            .iter()
-            .map(|&bit| if bit { '1' } else { '0' })
-            .collect();
-        let fitness = actor.fit(&population.data, total_space);
-        println!("Actor {}: {}", i + 1, fitness);
-    }
+    let mut generation_fitness: Vec<usize> = Vec::new();
 
-    // Run roulette selection 5 times and print the selected actors for each run
-    println!("\nRoulette Selection (5 times):");
-    for run in 1..=500 {
-        println!("\nRun {}:", run);
+    // Run the simulation for 500 generations
+    for _run in 1..=1000 {
         population.roulette_selection(total_space);
         population.apply_crossover();
         population.mutate_population();
 
-        // Print the new population's bitstrings after roulette selection
-        for (i, actor) in population.actors.iter().enumerate() {
-            let bitstring: String = actor
-                .bitstring
-                .iter()
-                .map(|&bit| if bit { '1' } else { '0' })
-                .collect();
-            let fitness = actor.fit(&population.data, total_space);
-            println!("Actor {}: {}", i + 1, fitness);
-        }
+        // Calculate the average fitness of the current population
+        let avg_fitness: usize = population.actors.iter()
+            .map(|actor| actor.fit(&population.data, total_space))
+            .sum::<usize>() / population.size;
+        
+        generation_fitness.push(avg_fitness);
     }
+
+    // Plotting
+    let root_area = BitMapBackend::new("fitness_plot.png", (640, 480)).into_drawing_area();
+    root_area.fill(&WHITE).unwrap();
+    let mut chart = ChartBuilder::on(&root_area)
+        .caption("Average Fitness Over Generations", ("sans-serif", 50))
+        .margin(10)
+        .x_label_area_size(30)
+        .y_label_area_size(40)
+        .build_cartesian_2d(0..500, 0..*generation_fitness.iter().max().unwrap() + 10)
+        .unwrap();
+
+    chart.configure_mesh().draw().unwrap();
+    chart.draw_series(LineSeries::new(
+        (0..).zip(generation_fitness.iter()).map(|(x, y)| (x, *y)),
+        &RED,
+    )).unwrap();
 }
