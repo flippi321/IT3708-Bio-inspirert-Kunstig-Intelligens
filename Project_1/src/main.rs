@@ -246,9 +246,9 @@ fn main() -> Result<(), Box<dyn Error>> {
     let data = read_csv("data/KP/knapPI_12_500_1000_82.csv")?;
     let bitstring_length = data.len();
     let mutation_rate = 1.0 / (bitstring_length as f64);
-    let mut population = Population::new(500, bitstring_length, mutation_rate, data);
+    let mut population = Population::new(1000, bitstring_length, mutation_rate, data);
 
-    let (best_fitness, avg_fitness, worst_fitness) = population.run_evolution(total_space, 500);
+    let (best_fitness, avg_fitness, worst_fitness) = population.run_evolution(total_space, 2000);
 
     plot_fitness(
         &best_fitness,
