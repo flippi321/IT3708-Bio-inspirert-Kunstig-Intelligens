@@ -1,4 +1,7 @@
 use rand::Rng;
+use std::error::Error;
+use std::path::Path;
+use csv::ReaderBuilder;
 
 #[derive(Clone)]
 pub struct Actor {
@@ -9,19 +12,36 @@ pub struct Population {
     pub size: usize, // Population size
     pub actors: Vec<Actor>,
     pub mutation_rate: f64,
+    pub data: Vec<(usize, usize, usize, usize)>, // Store CSV data
 }
 
 impl Actor {
-    // Evaluate fitness
-    pub fn fit(&self) -> usize {
-        // Example fitness function: count the number of `true` bits
-        self.bitstring.iter().filter(|&&bit| bit).count()
+    // Evaluate fitness based on the data rows selected by the bitstring
+    pub fn fit(&self, data: &[(usize, usize, usize, usize)], max_size: i64) -> usize {
+        // Calculate the total sum of 'p' where the bit is true
+        let sum_p: i64 = self.bitstring.iter().enumerate()
+            .filter_map(|(i, &bit)| if bit { Some(data[i].1 as i64) } else { None })
+            .sum();
+
+        // Calculate the total fitness by summarizing 'w' where the bit is true
+        let total_fitness: usize = self.bitstring.iter().enumerate()
+            .filter_map(|(i, &bit)| if bit { Some(data[i].2) } else { None })
+            .sum();
+
+        // Apply punishment if the sum of 'p' exceeds 'max_size'
+        if sum_p > max_size {
+            let penalty = ((sum_p - max_size) as usize).min(total_fitness); // Ensure penalty does not exceed total fitness
+            total_fitness - penalty
+        } else {
+            total_fitness
+        }
     }
 }
 
+
 impl Population {
     // Create a new Population with a given size and bitstring length
-    pub fn new(size: usize, bitstring_length: usize, mutation_rate: f64) -> Self {
+    pub fn new(size: usize, bitstring_length: usize, mutation_rate: f64, data: Vec<(usize, usize, usize, usize)>) -> Self {
         let actors = (0..size)
             .map(|_| Actor {
                 bitstring: (0..bitstring_length)
@@ -34,22 +54,21 @@ impl Population {
             size,
             actors,
             mutation_rate,
+            data,
         }
     }
 
     // Calculate selection probabilities for each actor
-    pub fn calculate_chance(&self) -> Vec<f64> {
+    pub fn calculate_chance(&self, total_space: i64) -> Vec<f64> {
         let mut total_fit: f64 = 0.0;
         let mut prob: Vec<f64> = vec![0.0; self.size];
 
-        // Summarize all Actors
         for (i, actor) in self.actors.iter().enumerate() {
-            let fitness = actor.fit() as f64; // Calculate fitness
+            let fitness = actor.fit(&self.data, total_space) as f64; // Calculate fitness
             total_fit += fitness; // Accumulate total fitness
             prob[i] = fitness; // Store fitness in prob temporarily
         }
 
-        // Calculate the probability of selection for each actor
         for value in prob.iter_mut() {
             *value /= total_fit; // Normalize fitness to get selection probability
         }
@@ -58,8 +77,8 @@ impl Population {
     }
 
     // Perform roulette selection to create the next generation
-    pub fn roulette_selection(&mut self) {
-        let prob = self.calculate_chance();
+    pub fn roulette_selection(&mut self, total_space: i64) {
+        let prob = self.calculate_chance(total_space);
         let mut rng = rand::thread_rng();
         let mut new_actors = Vec::with_capacity(self.size);
 
@@ -117,26 +136,47 @@ impl Population {
     }
 }
 
-fn main() {
-    // Create a population with 5 actors, each having a bitstring of length 10, and mutaion rate of 0.05
-    let mutation_rate = 1f64 / (5f64 * 10f64);
-    let mut population = Population::new(20, 10, mutation_rate);
+fn read_csv<P: AsRef<Path>>(path: P) -> Result<Vec<(usize, usize, usize, usize)>, Box<dyn Error>> {
+    let mut rdr = ReaderBuilder::new()
+        .has_headers(true)
+        .from_path(path)?;
+    let mut data = Vec::new();
 
-    // Print each Actor's bitstring
+    for result in rdr.records() {
+        let record = result?;
+        let i: usize = record[0].parse()?;
+        let p: usize = record[1].parse()?;
+        let w: usize = record[2].parse()?;
+        let x: usize = record[3].parse()?;
+        data.push((i, p, w, x));
+    }
+    Ok(data)
+}
+
+fn main() {
+    let total_space: i64 = 280785;
+
+    let data = read_csv("data/KP/knapPI_12_500_1000_82.csv").expect("Failed to read CSV");
+    let bitstring_length = data.len();
+    let mutation_rate = 1f64 / (5f64 * bitstring_length as f64);
+    let mut population = Population::new(20, bitstring_length, mutation_rate, data);
+
+    // Print each Actor's bitstring and fitness
     for (i, actor) in population.actors.iter().enumerate() {
         let bitstring: String = actor
             .bitstring
             .iter()
             .map(|&bit| if bit { '1' } else { '0' })
             .collect();
-        println!("Actor {}: {}, eval: {}", i + 1, bitstring, actor.fit());
+        let fitness = actor.fit(&population.data, total_space);
+        println!("Actor {}: {}", i + 1, fitness);
     }
 
     // Run roulette selection 5 times and print the selected actors for each run
     println!("\nRoulette Selection (5 times):");
     for run in 1..=500 {
         println!("\nRun {}:", run);
-        population.roulette_selection();
+        population.roulette_selection(total_space);
         population.apply_crossover();
         population.mutate_population();
 
@@ -147,7 +187,8 @@ fn main() {
                 .iter()
                 .map(|&bit| if bit { '1' } else { '0' })
                 .collect();
-            println!("Actor {}: {}, fit: {}", i + 1, bitstring, actor.fit());
+            let fitness = actor.fit(&population.data, total_space);
+            println!("Actor {}: {}", i + 1, fitness);
         }
     }
 }
