@@ -18,25 +18,25 @@ pub struct Population {
 
 impl Actor {
     // Evaluate fitness based on the data rows selected by the bitstring
-    pub fn fit(&self, data: &[(usize, usize, usize, usize)], max_size: i64) -> usize {
+    pub fn fit(&self, data: &[(usize, usize, usize, usize)], max_size: usize) -> usize {
         // Calculate the total sum of 'p' where the bit is true
-        let sum_p: i64 = self
+        let total_fitness: usize = self
             .bitstring
             .iter()
             .enumerate()
-            .filter_map(|(i, &bit)| if bit { Some(data[i].1 as i64) } else { None })
+            .filter_map(|(i, &bit)| if bit { Some(data[i].1 as usize) } else { None })
             .sum();
 
         // Calculate the total fitness by summarizing 'w' where the bit is true
-        let total_fitness: usize = self
+        let sum_w: usize = self
             .bitstring
             .iter()
             .enumerate()
             .filter_map(|(i, &bit)| if bit { Some(data[i].2) } else { None })
             .sum();
 
-        // Apply punishment if the sum of 'p' exceeds 'max_size'
-        if sum_p > max_size {
+        // Apply punishment if the sum of 'w' exceeds 'max_size'
+        if sum_w > max_size {
             let distance_metric: usize = max_size as usize;
             let penalized_fitness: usize = (total_fitness - distance_metric * 2) as usize; // We penalize by removing 10% of gathered points
             penalized_fitness
@@ -71,7 +71,7 @@ impl Population {
     }
 
     // Calculate selection probabilities for each actor
-    pub fn calculate_chance(&self, total_space: i64) -> Vec<f64> {
+    pub fn calculate_chance(&self, total_space: usize) -> Vec<f64> {
         let mut total_fit: f64 = 0.0;
         let mut prob: Vec<f64> = vec![0.0; self.size];
 
@@ -89,7 +89,7 @@ impl Population {
     }
 
     // Perform roulette selection to create the next generation
-    pub fn roulette_selection(&mut self, total_space: i64) {
+    pub fn roulette_selection(&mut self, total_space: usize) {
         let prob = self.calculate_chance(total_space);
         let mut rng = rand::thread_rng();
         let mut new_actors = Vec::with_capacity(self.size);
@@ -146,7 +146,7 @@ impl Population {
         }
     }
 
-    pub fn run_evolution(&mut self, total_space: i64, generations: usize) -> (Vec<usize>, Vec<f64>, Vec<usize>) {
+    pub fn run_evolution(&mut self, total_space: usize, generations: usize) -> (Vec<usize>, Vec<f64>, Vec<usize>) {
         let mut best_fitness_history = Vec::with_capacity(generations);
         let mut avg_fitness_history = Vec::with_capacity(generations);
         let mut worst_fitness_history = Vec::with_capacity(generations);
@@ -242,13 +242,13 @@ fn plot_fitness(
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let total_space: i64 = 280785;
+    let total_space: usize = 280785;
     let data = read_csv("data/KP/knapPI_12_500_1000_82.csv")?;
     let bitstring_length = data.len();
     let mutation_rate = 1.0 / (bitstring_length as f64);
     let mut population = Population::new(500, bitstring_length, mutation_rate, data);
 
-    let (best_fitness, avg_fitness, worst_fitness) = population.run_evolution(total_space, 1000);
+    let (best_fitness, avg_fitness, worst_fitness) = population.run_evolution(total_space, 500);
 
     plot_fitness(
         &best_fitness,
