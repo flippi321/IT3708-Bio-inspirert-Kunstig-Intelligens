@@ -204,10 +204,10 @@ fn main() -> Result<(), Box<dyn Error>> {
     let total_space: i64 = 280785;
     let data = read_csv("data/KP/knapPI_12_500_1000_82.csv")?;
     let bitstring_length = data.len();
-    let mutation_rate = 1.0 / (5.0 * bitstring_length as f64);
-    let mut population = Population::new(500, bitstring_length, mutation_rate, data);
+    let mutation_rate = 2.0 / (5.0 * bitstring_length as f64);
+    let mut population = Population::new(1000, bitstring_length, mutation_rate, data);
 
-    let fitness_history = population.run_evolution(total_space, 500);
+    let fitness_history = population.run_evolution(total_space, 1000);
 
     plot_fitness(&fitness_history, "fitness_evolution.png")?;
 
