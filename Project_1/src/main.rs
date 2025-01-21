@@ -113,6 +113,36 @@ impl Population {
         self.actors = new_actors;
     }
 
+    pub fn tournament_selection(&mut self, tournament_size: usize, total_space: usize) {
+        let mut rng = rand::thread_rng();
+        let mut new_actors = Vec::with_capacity(self.size);
+    
+        for _ in 0..self.size {
+            let mut best_actor = None;
+            let mut best_fitness = 0;
+    
+            // Randomly select 'tournament_size' actors and find the best among them
+            for _ in 0..tournament_size {
+                let candidate_index = rng.gen_range(0..self.size);
+                let candidate = &self.actors[candidate_index];
+                let candidate_fitness = candidate.fit(&self.data, total_space);
+    
+                if best_actor.is_none() || candidate_fitness > best_fitness {
+                    best_actor = Some(candidate.clone());
+                    best_fitness = candidate_fitness;
+                }
+            }
+    
+            // Add the best actor from the tournament to the new population
+            if let Some(actor) = best_actor {
+                new_actors.push(actor);
+            }
+        }
+    
+        // Update the population with the new generation of actors
+        self.actors = new_actors;
+    }
+
     pub fn mutate_population(&mut self) {
         for actor in &mut self.actors {
             // Traverse each bit in the actor's bitstring
@@ -152,7 +182,7 @@ impl Population {
         let mut worst_fitness_history = Vec::with_capacity(generations);
     
         for _ in 0..generations {
-            self.roulette_selection(total_space);
+            self.tournament_selection(total_space/10, total_space);
             self.apply_crossover();
             self.mutate_population();
     
@@ -246,9 +276,9 @@ fn main() -> Result<(), Box<dyn Error>> {
     let data = read_csv("data/KP/knapPI_12_500_1000_82.csv")?;
     let bitstring_length = data.len();
     let mutation_rate = 1.0 / (bitstring_length as f64);
-    let mut population = Population::new(1000, bitstring_length, mutation_rate, data);
+    let mut population = Population::new(10, bitstring_length, mutation_rate, data);
 
-    let (best_fitness, avg_fitness, worst_fitness) = population.run_evolution(total_space, 2000);
+    let (best_fitness, avg_fitness, worst_fitness) = population.run_evolution(total_space, 100);
 
     plot_fitness(
         &best_fitness,
