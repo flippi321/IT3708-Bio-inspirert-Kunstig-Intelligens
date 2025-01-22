@@ -38,7 +38,11 @@ impl Actor {
         // Apply punishment if the sum of 'w' exceeds 'max_size'
         if sum_w > max_size {
             let distance_metric: usize = max_size as usize;
-            let penalized_fitness: usize = (total_fitness - distance_metric * 2) as usize; // We penalize by removing 10% of gathered points
+            let penalized_fitness: usize = if total_fitness >= distance_metric * 1 {
+                total_fitness - distance_metric * 1
+            } else {
+                0
+            };            
             penalized_fitness
         } else {
             total_fitness
@@ -276,9 +280,9 @@ fn main() -> Result<(), Box<dyn Error>> {
     let data = read_csv("data/KP/knapPI_12_500_1000_82.csv")?;
     let bitstring_length = data.len();
     let mutation_rate = 1.0 / (bitstring_length as f64);
-    let mut population = Population::new(10, bitstring_length, mutation_rate, data);
+    let mut population = Population::new(20, bitstring_length, mutation_rate, data);
 
-    let (best_fitness, avg_fitness, worst_fitness) = population.run_evolution(total_space, 100);
+    let (best_fitness, avg_fitness, worst_fitness) = population.run_evolution(total_space, 200);
 
     plot_fitness(
         &best_fitness,
