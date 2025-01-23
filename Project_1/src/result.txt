@@ -2,3 +2,9 @@ Population: 1000
 Generations: 2000
 --------------------------------------
 Best fitness achieved: 289901
+
+
+population: 1500
+Generations: 2000
+--------------------------------------
+Best fitness achieved: 289874
